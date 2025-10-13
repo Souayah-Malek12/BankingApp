@@ -1,0 +1,169 @@
+package com.BankingAppSpringBoot.BankingApp.service.serviceImpl;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+
+import com.BankingAppSpringBoot.BankingApp.dto.AccountDto;
+import com.BankingAppSpringBoot.BankingApp.entity.Account;
+import com.BankingAppSpringBoot.BankingApp.entity.Transaction;
+import com.BankingAppSpringBoot.BankingApp.entity.User;
+import com.BankingAppSpringBoot.BankingApp.entity.Transaction.TransactionType;
+import com.BankingAppSpringBoot.BankingApp.mapper.AccountMapper;
+import com.BankingAppSpringBoot.BankingApp.repository.AccountRepository;
+import com.BankingAppSpringBoot.BankingApp.repository.TransactionRepository;
+import com.BankingAppSpringBoot.BankingApp.repository.UserRepository;
+import com.BankingAppSpringBoot.BankingApp.service.AccountService;
+
+import jakarta.transaction.Transactional;
+
+@Service  // ✅ This is what makes it a Spring Bean
+public class AccountServiceImpl  implements AccountService{
+
+    private AccountRepository accountRepository;
+    private UserRepository userRepository;
+    private TransactionRepository transactionRepository;
+
+    public AccountServiceImpl( AccountRepository accountRepository, UserRepository userRepository,  TransactionRepository transactionRepository){
+        this.accountRepository = accountRepository;
+        this.userRepository = userRepository;
+        this.transactionRepository = transactionRepository;
+
+    }
+
+    @Override
+    public AccountDto createAccount(AccountDto accountDto){
+
+
+        User user = userRepository.findById(accountDto.getUserId())
+                                    .orElseThrow(() -> new RuntimeException("User not found with id " + accountDto.getUserId()));
+
+
+
+        Account account = AccountMapper.toEntity(accountDto);
+        account.setUser(user);
+
+        accountRepository.save(account);
+        
+
+        return AccountMapper.toDto(account);
+    }
+
+    @Override
+    public AccountDto getAccountById(Long id){
+        Account account = accountRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Account not found with id " +id));
+        return AccountMapper.toDto(account);
+        
+    }
+
+    @Override
+    public void deleteAccount(Long id){
+        Account account = accountRepository.findById(id)
+        .orElseThrow(() -> new RuntimeException("Account not found with id " +id));
+
+        accountRepository.delete(account);
+    }
+
+    @Override
+    public List<AccountDto> getAllAccounts(){
+        List<AccountDto> accounts = accountRepository.findAll().stream()
+        .map(AccountMapper::toDto) // works because toDto is static
+        .collect(Collectors.toList());
+        return accounts;
+    }
+
+
+    @Transactional
+    public AccountDto withDraw(String rib, BigDecimal amount){
+
+        Account account = accountRepository.findByRib(rib)
+                            .orElseThrow(() -> new RuntimeException("User not found with rib " + rib));
+        
+        if(account.getBalance().compareTo(amount) < 0 ){
+            throw new RuntimeException("Insufficient balance");
+        }
+
+        account.setBalance(account.getBalance().subtract(amount));
+        Transaction tx  = new Transaction();
+
+        tx.setAccount(account);
+        
+        tx.setAmount(amount);
+        tx.setType(TransactionType.WITHDRAW);
+        tx.setTimestamp(LocalDateTime.now());
+        transactionRepository.save(tx);
+        accountRepository.save(account);
+
+
+        return AccountMapper.toDto(account);
+    }
+
+    @Transactional
+    public AccountDto deposit(String rib , BigDecimal amount){
+     
+        Account account = accountRepository.findByRib(rib)
+                            .orElseThrow(() -> new RuntimeException("User not found with rib " + rib));
+        
+        account.setBalance(account.getBalance().add(amount));   
+        Transaction tx = new Transaction();
+
+        tx.setAccount(account);
+        tx.setAmount(amount);
+        tx.setType(TransactionType.DEPOSIT);
+        tx.setTimestamp(LocalDateTime.now());
+        transactionRepository.save(tx);
+
+        accountRepository.save(account);
+        
+        return AccountMapper.toDto(account);
+    }
+
+    @Transactional
+    public void transferMoney(String senderRib, String receiverRib, BigDecimal amount){
+
+        Account senderAc = accountRepository.findByRib(senderRib)
+        .orElseThrow(() -> new RuntimeException("sender  not found with rib " + senderRib));
+
+
+
+        Account receiverAc = accountRepository.findByRib(receiverRib)
+                                    .orElseThrow(() -> new RuntimeException("Receiver  not found with rib " + receiverRib));
+                        
+
+        if(senderAc.getBalance().compareTo(amount) <0 ){
+            throw new RuntimeException("Sender has insufficient balance");
+        }
+
+        Transaction sendTran = new Transaction();
+        Transaction receivTran = new Transaction();
+
+        
+        senderAc.setBalance(senderAc.getBalance().subtract(amount));
+        receiverAc.setBalance(receiverAc.getBalance().add(amount));
+        
+        accountRepository.save(senderAc);
+        accountRepository.save(receiverAc);
+
+        sendTran.setAccount(senderAc);
+        sendTran.setAmount(amount);
+        sendTran.setType(TransactionType.WITHDRAW);
+        sendTran.setTimestamp(LocalDateTime.now());
+        transactionRepository.save(sendTran);
+
+        receivTran.setAccount(receiverAc);
+        receivTran.setAmount(amount);
+        receivTran.setType(TransactionType.DEPOSIT);
+        receivTran.setTimestamp(LocalDateTime.now());
+        transactionRepository.save(receivTran);
+
+
+    }
+
+
+
+
+}
