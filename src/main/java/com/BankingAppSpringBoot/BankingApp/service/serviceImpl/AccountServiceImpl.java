@@ -26,11 +26,13 @@ public class AccountServiceImpl  implements AccountService{
     private AccountRepository accountRepository;
     private UserRepository userRepository;
     private TransactionRepository transactionRepository;
+    private final SmsService   smsService;
 
-    public AccountServiceImpl( AccountRepository accountRepository, UserRepository userRepository,  TransactionRepository transactionRepository){
+    public AccountServiceImpl( AccountRepository accountRepository, UserRepository userRepository,  TransactionRepository transactionRepository, SmsService   smsService){
         this.accountRepository = accountRepository;
         this.userRepository = userRepository;
         this.transactionRepository = transactionRepository;
+        this.smsService=smsService;
 
     }
 
@@ -98,6 +100,16 @@ public class AccountServiceImpl  implements AccountService{
         transactionRepository.save(tx);
         accountRepository.save(account);
 
+        String message = String.format(
+            "Dear %s, %.2f TND has been withdrawn from your account %s. Remaining balance: %.2f TND.",
+            account.getUser().getFullName(),
+            amount,
+            account.getRib(),
+            account.getBalance()
+        );
+
+        smsService.sendSms(account.getUser().getPhoneNumber(), message);
+
 
         return AccountMapper.toDto(account);
     }
@@ -118,6 +130,17 @@ public class AccountServiceImpl  implements AccountService{
         transactionRepository.save(tx);
 
         accountRepository.save(account);
+
+        String message = String.format(
+            "Dear %s, %.2f TND has been deposit to your account %s. your  balance: %.2f TND.",
+            account.getUser().getFullName(),
+            amount,
+            rib,
+            account.getBalance()
+        );
+
+        smsService.sendSms(account.getUser().getPhoneNumber(), message);
+
         
         return AccountMapper.toDto(account);
     }

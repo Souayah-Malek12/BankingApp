@@ -37,6 +37,11 @@
 			<artifactId>spring-security-crypto</artifactId>
 			<version>6.2.3</version> <!-- match your Spring Boot version -->
 		</dependency>
+		<dependency>
+			<groupId>com.twilio.sdk</groupId>
+			<artifactId>twilio</artifactId>
+			<version>9.3.0</version>
+		</dependency>
 		
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
