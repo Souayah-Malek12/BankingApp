@@ -100,15 +100,15 @@ public class AccountServiceImpl  implements AccountService{
         transactionRepository.save(tx);
         accountRepository.save(account);
 
-        String message = String.format(
-            "Dear %s, %.2f TND has been withdrawn from your account %s. Remaining balance: %.2f TND.",
-            account.getUser().getFullName(),
-            amount,
-            account.getRib(),
-            account.getBalance()
-        );
+        //String message = String.format(
+        //    "Dear %s, %.2f TND has been withdrawn from your account %s. Remaining balance: %.2f TND.",
+        //    account.getUser().getFullName(),
+        //    amount,
+        //    account.getRib(),
+        //    account.getBalance()
+        //);
 
-        smsService.sendSms(account.getUser().getPhoneNumber(), message);
+        // smsService.sendSms(account.getUser().getPhoneNumber(), message);
 
 
         return AccountMapper.toDto(account);
