@@ -61,15 +61,15 @@ public class AuthServiceImpl implements AuthService {
 
         userRepository.save(user);
 
-        String message = String.format(
-    "Dear %s, you have successfully registered with AGV Bank.",
-    request.getFullName()
-);
+ //       String message = String.format(
+   // "Dear %s, you have successfully registered with AGV Bank.",
+   // request.getFullName()
+//);
 
-smsService.sendSms(request.getPhoneNumber(), message);
+//smsService.sendSms(request.getPhoneNumber(), message);
 
     
-            smsService.sendSms(request.getPhoneNumber(), message);
+          //  smsService.sendSms(request.getPhoneNumber(), message);
     
 
         // Generate JWT token
