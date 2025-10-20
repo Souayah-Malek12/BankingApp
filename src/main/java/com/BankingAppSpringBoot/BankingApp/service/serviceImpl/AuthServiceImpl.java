@@ -1,6 +1,7 @@
 package com.BankingAppSpringBoot.BankingApp.service.serviceImpl;
 
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -9,6 +10,8 @@ import com.BankingAppSpringBoot.BankingApp.dto.AuthResponse;
 import com.BankingAppSpringBoot.BankingApp.dto.LoginRequest;
 import com.BankingAppSpringBoot.BankingApp.dto.RegisterRequest;
 import com.BankingAppSpringBoot.BankingApp.entity.User;
+import com.BankingAppSpringBoot.BankingApp.exception.BadRequestException;
+import com.BankingAppSpringBoot.BankingApp.exception.ResourceNotFoundException;
 import com.BankingAppSpringBoot.BankingApp.repository.UserRepository;
 import com.BankingAppSpringBoot.BankingApp.security.JwtService;
 import com.BankingAppSpringBoot.BankingApp.service.AuthService;
@@ -43,7 +46,7 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse register(RegisterRequest request) {
         // Check if user already exists
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new RuntimeException("Email already registered");
+            throw new BadRequestException("Email already registered"+request.getEmail());
         }
 
         // Create new user
@@ -83,16 +86,20 @@ smsService.sendSms(request.getPhoneNumber(), message);
     @Override
     public AuthResponse login(LoginRequest request) {
         // Authenticate user
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
+        try {
+                authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
                         request.getPassword()
-                )
-        );
+                    )
+                );
+            } catch (BadCredentialsException ex) {
+                throw new BadRequestException("Invalid email or password");
+            }
 
         // Find user
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"+request.getEmail()));
 
         // Generate JWT token
         String jwtToken = jwtService.generateToken(user);

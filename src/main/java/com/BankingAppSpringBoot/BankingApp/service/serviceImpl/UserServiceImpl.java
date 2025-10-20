@@ -7,9 +7,13 @@ import org.springframework.stereotype.Service;
 
 import com.BankingAppSpringBoot.BankingApp.dto.UserDto;
 import com.BankingAppSpringBoot.BankingApp.entity.User;
+import com.BankingAppSpringBoot.BankingApp.exception.ResourceNotFoundException;
 import com.BankingAppSpringBoot.BankingApp.mapper.UserMapper;
 import com.BankingAppSpringBoot.BankingApp.repository.UserRepository;
 import com.BankingAppSpringBoot.BankingApp.service.UserService;
+
+import com.BankingAppSpringBoot.BankingApp.exception.BadRequestException; // ✅ CORRECT
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Service
@@ -27,32 +31,44 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDto createUser(UserDto userDto) {
+        if (userRepository.findByEmail(userDto.getEmail()).isPresent()) {
+            throw new BadRequestException("Email already in use: " + userDto.getEmail());
+        }
         User user = userMapper.toEntity(userDto);
         user.setPassword(passwordEncoder.encode(user.getPassword()));
 
+        try{
         userRepository.save(user);
+        }catch (Exception e){
+            throw new BadRequestException("Failed to create user: " + e.getMessage());
+
+        }
         return userMapper.toDto(user);
     }
 
     @Override
     public UserDto getUserById(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id " + id));
         return userMapper.toDto(user);
     }
 
     @Override
     public List<UserDto> getAllUsers() {
-        return userRepository.findAll()
+        List<UserDto> users = userRepository.findAll()
                 .stream()
                 .map(userMapper::toDto)
                 .collect(Collectors.toList());
+        if(users.isEmpty()){
+            throw new ResourceNotFoundException("No users found");
+        }
+        return users;
     }
 
     @Override
     public UserDto UpdateUser(Long id, UserDto userDto) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id " + id));
+                .orElseThrow(() -> new  ResourceNotFoundException("User not found: " + id));
 
         if(userDto.getFullName() != null){
         user.setFullName(userDto.getFullName());
@@ -73,17 +89,28 @@ public class UserServiceImpl implements UserService {
             user.setRole(userDto.getRole());
         }
 
-        User updatedUser = userRepository.save(user);
+        User updatedUser;
+        try{
+         updatedUser = userRepository.save(user);
+        }catch(Exception e){
+            throw new ResourceNotFoundException("No users found");
+        }
         return userMapper.toDto(updatedUser);
     }
 
     @Override
     public String DeleteUser(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
         userRepository.delete(user);
 
-        String deletedUser = user.getEmail()+"  deletedSuccesffully";
+        String deletedUser = user.getEmail()+"  deleted Succesffully";
+
+        try {
+            userRepository.delete(user);
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to delete user: " + e.getMessage());
+        }
 
         return deletedUser;
     }
