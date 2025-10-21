@@ -48,7 +48,7 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/api/auth/**").permitAll()
-                    .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                    .requestMatchers("/api/users/**").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.GET, "/api/accounts").hasRole("ADMIN")
                     .anyRequest().authenticated()
             )
